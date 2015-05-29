@@ -1,5 +1,14 @@
 <?php
-/* $Id: suggestedterms.module,v 1.2.2.7 2009/10/08 22:34:21 crell Exp $ */
+
+/*
+ * Implements hook_init().
+ * Drupal_add_js() was moved into this function to prevent a conflict with CCK Filefield.
+ */
+function suggestedterms_init() {
+  $path = drupal_get_path('module', 'suggestedterms');
+  drupal_add_js($path . '/suggestedterms.js', 'module', 'header', TRUE);
+  drupal_add_css(drupal_get_path('module', 'suggestedterms') .'/suggestedterms.css', 'module', 'all', TRUE);
+}
 
 /**
 * define constants
@@ -53,11 +62,16 @@ function suggestedterms_theme() {
  * @param $name
  *   The term name to theme.
  */
-function theme_suggestedterm($name) {
+function theme_suggestedterm($name, $selected) {
   if (FALSE !== strpos($name, ',')) {
     $name = '"'. $name .'"';
   }
-  return "<span class='suggestedterm'>{$name}</span>";
+  if ($selected) {
+    return "<span class='suggestedterm remove'>{$name}</span>";
+  }
+  else {
+    return "<span class='suggestedterm'>{$name}</span>";
+  }
 }
 
 /**
@@ -66,7 +80,7 @@ function theme_suggestedterm($name) {
 * @return
 *   A string containing the clickable spans for the suggestedterms module.
 */
-function _suggestedterms_build_suggestions($vid, $sort_order, $display_what) {
+function _suggestedterms_build_suggestions($vid, $sort_order, $display_what, $selected_terms) {
   // Use left join to display all entries, inner join to diaplay only used ones.
   $query_type = ($display_what == SUGGESTEDTERMS_DISPLAY_ALL) ? " LEFT " : " INNER ";
 
@@ -80,7 +94,7 @@ function _suggestedterms_build_suggestions($vid, $sort_order, $display_what) {
       break;
 
     case SUGGESTEDTERMS_SORT_RECENT:
-      $query = "SELECT t.name AS name FROM {term_data} t $query_type JOIN {term_node} tn ON (t.tid = nt.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY t.tid desc";
+      $query = "SELECT t.name AS name FROM {term_data} t $query_type JOIN {term_node} tn ON (t.tid = tn.tid) WHERE t.vid = %d GROUP BY t.name ORDER BY t.tid desc";
       break;
 
     case SUGGESTEDTERMS_SORT_WEIGHT:
@@ -98,9 +112,13 @@ function _suggestedterms_build_suggestions($vid, $sort_order, $display_what) {
   $query_result = ($total_terms > 0) ? db_query_range($query, $vid, 0, $total_terms) : db_query($query, $vid);
   $terms = array();
   while($record = db_fetch_object($query_result)) {
-    $terms[] = theme('suggestedterm', check_plain($record->name));
+    if (is_array($selected_terms) && in_array($record->name, $selected_terms)) {
+      $selected = TRUE;
+    }
+    $terms[] = theme('suggestedterm', check_plain($record->name), $selected);
+    $selected = FALSE;
   }
-  return implode(', ', $terms);
+  return '<div class="suggestedterms">' . implode(', ', $terms) . '</div>';
 }
 
 /**
@@ -108,8 +126,6 @@ function _suggestedterms_build_suggestions($vid, $sort_order, $display_what) {
  */
 function suggestedterms_form_alter(&$form, $form_state, $form_id) {
   if ((isset($form['type']) && $form['type']['#value'] .'_node_form' == $form_id) && isset($form['taxonomy']['tags'])) {
-    $path = drupal_get_path('module', 'suggestedterms');
-    drupal_add_js($path . '/suggestedterms.js');
     $display_what = variable_get('suggestedterms_display_mode', SUGGESTEDTERMS_DISPLAY_ALL);
     // If multiple vocabularies, loop over each.
     foreach ($form['taxonomy']['tags'] as $vid => $thisindex) {
@@ -137,7 +153,7 @@ function suggestedterms_form_alter(&$form, $form_state, $form_id) {
           break;
       }
       // Build the suggested terms and set in description tag.
-      $form['taxonomy']['tags'][$vid]['#description'] .= "<br />\n". $tag_description . ': ' . _suggestedterms_build_suggestions($vid, $sort_order, $display_what);
+      $form['taxonomy']['tags'][$vid]['#description'] .= "<br />\n". $tag_description . ': ' . _suggestedterms_build_suggestions($vid, $sort_order, $display_what, explode(', ', $form['taxonomy']['tags'][$vid]['#default_value']));
     }
   }
 }

@@ -2,8 +2,13 @@
 
 /**
  * @file
- * Introduce the styles for apply a render based on CSS
- * sprites and generate automatically the needed files.
+ * Adds new styles based on sprites.
+ *
+ * This plugin implements the rendering based on CSS sprites,
+ * generating automatically the needed files and providing
+ * two extra styles.
+ *
+ * @author Fabio Mucciante (TheCrow)
  */
 
 define('SLS_GD_WIDTH', 0);
@@ -13,10 +18,12 @@ define('SLS_GD_MIME', 'mime');
 define('SLS_FILENAME', 'sl_sprites');
 
 /**
- * Load the CSS file if requested.
+ * Implementation of hook_init().
  */
-if (variable_get('service_links_use_internal_sprites', 0)) {
-  drupal_add_css(file_directory_path() . '/' . SLS_FILENAME . '.css');
+function service_links_sprites_init() {
+  if (variable_get('service_links_use_internal_sprites', 0)) {
+    drupal_add_css(file_directory_path() . '/' . SLS_FILENAME . '.css');
+  }
 }
 
 /**

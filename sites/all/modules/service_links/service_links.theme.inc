@@ -22,8 +22,9 @@ function theme_service_links_build_link($text, $url = array(), $image = NULL, $n
         );
         break;
       case SERVICE_LINKS_STYLE_IMAGE:
+        $alt_text = t('!name logo', array('!name' => $text));
         $link = array(
-          'title' => theme('image', service_links_expand_path($image), $text),
+          'title' => theme('image', service_links_expand_path($image), $alt_text),
           'href' => $url[0],
           'query' => $query,
           'attributes' => $attributes,
@@ -31,8 +32,9 @@ function theme_service_links_build_link($text, $url = array(), $image = NULL, $n
         );
         break;
       case SERVICE_LINKS_STYLE_IMAGE_AND_TEXT:
+        $alt_text = t('!name logo', array('!name' => $text));
         $link = array(
-          'title' => theme('image', service_links_expand_path($image), $text) .' '. $text,
+          'title' => theme('image', service_links_expand_path($image), $alt_text) .' '. $text,
           'href' => $url[0],
           'query' => $query,
           'attributes' => $attributes,
@@ -53,30 +55,32 @@ function theme_service_links_build_link($text, $url = array(), $image = NULL, $n
     }
   }
   else {
-    $attributes = array('attributes' => $attributes);
-    if (isset($url[1])) {
-      $attributes['query'] = $url[1];
-    }
-
+    $attributes = array(
+      'attributes' => $attributes,
+      'query' => isset($url[1]) ? $url[1] : NULL,
+    );
+    
     switch ($style) {
       case SERVICE_LINKS_STYLE_TEXT:
         $link = l($text, $url[0], $attributes);
         break;
       case SERVICE_LINKS_STYLE_IMAGE:
-        $attributes = array_merge($attributes, array('html' => TRUE));
-        $link = l(theme('image', service_links_expand_path($image), $text), $url[0], $attributes);
+        $attributes['html'] = TRUE;
+        $alt_text = t('!name logo', array('!name' => $text));
+        $link = l(theme('image', service_links_expand_path($image), $alt_text), $url[0], $attributes);
         break;
       case SERVICE_LINKS_STYLE_IMAGE_AND_TEXT:
-        $attributes = array_merge($attributes, array('html' => TRUE));
-        $link = l(theme('image', service_links_expand_path($image), $text) .' '. $text, $url[0], $attributes);
+        $attributes['html'] = TRUE;
+        $alt_text = t('!name logo', array('!name' => $text));
+        $link = l(theme('image', service_links_expand_path($image), $alt_text) .' '. $text, $url[0], $attributes);
         break;
       case SERVICE_LINKS_STYLE_EMPTY:
-        $attributes = array_merge($attributes, array('html' => TRUE));
+        $attributes['html'] = TRUE;
         $link = l('<span style="display:none;">' . $text . '</span>', $url[0], $attributes);
         break;
       case SERVICE_LINKS_STYLE_FISHEYE:
         $attributes['attributes']['class'] = isset($attributes['attributes']['class']) ? $attributes['attributes']['class'] .' fisheyeItem' : 'fisheyeItem' ;
-        $attributes = array_merge($attributes, array('html' => TRUE));
+        $attributes['html'] = TRUE;
         $link = l(theme('image', service_links_expand_path($image, 'fisheye', 'icons'), $text, NULL, NULL, FALSE) .'<span>'. $text .'</span>', $url[0], $attributes);
         break;
       default:

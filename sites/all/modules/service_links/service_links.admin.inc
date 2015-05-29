@@ -26,6 +26,7 @@ function theme_service_links_drag_table($form) {
       '#value' => $service['#default_value'],
       '#id' => $service['#id'],
       '#name' => $service['#name'],
+      '#parents' => $service['#parents'],
     );
     $col[] = drupal_render($service['show']);
 
@@ -102,7 +103,7 @@ function service_links_admin_settings() {
           $form['where_to_show_the_links']['service_links_category_by_voc_' . $vid] = array(
             '#type' => 'select',
             '#multiple' => TRUE,
-            '#title' => t('@voc', array('@voc' => $vocabulary)),
+            '#title' => $vocabulary,
             '#default_value' => $selected_types,
             '#options' => $terms,
             '#size' => ($count > 10 ? 10 : $count),
@@ -340,7 +341,7 @@ function service_links_admin_settings() {
     $form['short_links']['service_links_domain_redirect'] = array(
       '#type' => 'textfield',
       '#title' => t('Domain to redirect'),
-      '#description' => t('Write here the complete address without trailing slash (i.e. %name)', array('%name' => 'http://www.example.com') ),
+      '#description' => t('Enter the complete address without trailing slash (i.e. %name)', array('%name' => 'http://www.example.com') ),
       '#default_value' => variable_get('service_links_domain_redirect', ''),
       '#size' => 40,
     );

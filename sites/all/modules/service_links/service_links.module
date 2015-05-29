@@ -2,11 +2,17 @@
 
 /**
  * @file
- * Original Author: Fredrik Jonsson fredrik at combonet dot se
- * Ex Maintainer: Sivanandhan, P. apsivam .at. apsivam .dot. in
- * Current Maintainer and 2.x branch starter: Fabio Mucciante aka TheCrow
- * Co Mantainer: Rob Loach
- * A module that adds Digg, del.icio.us, reddit, Technorati etc. links to nodes.
+ * Adds social network links to the content.
+ *
+ * This module is the enhanced version of Service Links 1.x developed
+ * by Fredrik Jonsson, rewritten and improved to fit the new purposes:
+ * extend easily the number of services supported and provide APIs to
+ * print services everywhere within any content.
+ * More services are availaible at the @link
+ * http://servicelinks.altervista.org/?q=service Home page @endlink
+ * and can be selected to create a new package through a visual interface.
+ *
+ * @author: Fabio Mucciante (TheCrow)
  */
 
 define('SERVICE_LINKS_STYLE_NONE', 0);
@@ -333,6 +339,25 @@ function service_links_theme() {
 }
 
 /**
+ * Remove a service from the list if the related module is disabled
+ * and can't provide the correct values.
+ */
+function service_links_array_filter($services) {
+  $result = array();
+
+  foreach ($services as $service_id => $service) {
+    if ($service === 1) {
+      drupal_set_message(t('The service having id "@id" is missing, reactivate its module or save again the list of services.', array('@id' => $service_id)), 'warning', FALSE);
+    }
+    else {
+      $result[$service_id] = $service;
+    }
+  }
+
+  return $result;
+}
+
+/**
  * Discover all available service links by invoking hook_service_links().
  *
  * @param $services
@@ -368,12 +393,23 @@ function service_links_get_links($services = NULL, $reset = FALSE) {
       cache_set('service_links_get_links', $links);
     }
   }
-  // If desired, return only the given services.
-  if (isset($services) && is_numeric(key($services))) {
-    $services = array_combine($services, array_fill(0, count($services), 1));
+
+  // If desired, return only the wanted services.
+  if (isset($services)) {
+
+    // Detect a manual request and populate the array correctly.
+    if (is_numeric(key($services))) {
+      $services = array_combine($services, array_fill(0, count($services), 1));
+    }
+
+    // Provide only the services requested.
+    $services = array_merge($services, array_intersect_key($links, $services));
+
+    // Remove the unknown services.
+    $services = service_links_array_filter($services);
   }
 
-  return isset($services) ? array_merge($services, array_intersect_key($links, $services)) : $links;
+  return isset($services) ? $services : $links;
 }
 
 /**
@@ -516,7 +552,7 @@ function service_links_render_some($service_ids, $node = NULL, $nodelink = FALSE
   if (isset($options)) {
     if (!is_array($options)) {
       $options = array('style' => $options);
-    }  
+    }
     $settings = array_merge($settings, $options);
   }
  
@@ -540,11 +576,14 @@ function _service_links_render($service_id, $service, $settings, $nodelink, $nod
     }
   }
 
+  // With Clean Urls on this tag should be filled before the split otherwise will be lost.
+  $service['link'] = str_replace('<front-page>', $settings['subst']['front-page'], $service['link']);
+
   $service['url'] = preg_split('/\?/', $service['link']);
   $subst_id = isset($service['url'][1]) ? 1 : 0;
   $service['url'][$subst_id] = str_replace($settings['tag'], $settings['subst'], $service['url'][$subst_id]);
 
-  $service['attributes']['title'] = $service['description'];
+  $service['attributes']['title'] = t($service['description']);
   $class = str_replace(array('][', '_', ' '), '-', 'service_links-'. $service_id);
   $service['attributes']['class'] = isset($service['attributes']['class']) ? $service['attributes']['class'] . " " . $class : $class;
   $service['attributes'] += $settings['attributes'];
@@ -575,7 +614,7 @@ function _service_links_render($service_id, $service, $settings, $nodelink, $nod
 
   // Create the HTML.
   $link = theme('service_links_build_link',
-    $service['name'],
+    t($service['name']),
     $service['url'],
     $service['icon'],
     $nodelink,
@@ -590,7 +629,12 @@ function _service_links_render($service_id, $service, $settings, $nodelink, $nod
  * Load correctly the needed javascripts.
  */
 function _service_links_add_js($javascript) {
+  static $is_https;
   static $external_js;
+
+  if (!isset($is_https)) {
+    $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on';
+  }
 
   if (!is_array($javascript)) {
     $javascript = array($javascript);
@@ -602,6 +646,11 @@ function _service_links_add_js($javascript) {
 
   foreach ($javascript as $js) {
     if (strpos($js, '://') !== FALSE) {
+      if ($is_https) {
+        // Ensure that we embed the https js library.
+        $js = str_replace('http://', 'https://', $js);
+      }
+
       if (!in_array($js, $external_js)) {
         drupal_set_html_head('<script type="text/javascript" src="'. $js .'"></script>');
         $external_js[] = $js;
@@ -628,13 +677,20 @@ function _service_links_get_tags($node, &$settings) {
     $teaser = empty($node->teaser) ? '' : strip_tags($node->teaser);
     $nid = $node->nid;
   }
+  elseif (isset($settings['data'])) {
+    $title = isset($settings['data']['title']) ? $settings['data']['title'] : '';
+    $url = isset($settings['data']['url']) ? $settings['data']['url'] : '';
+    $query = isset($settings['data']['query']) ? $settings['data']['query'] : '';
+    $teaser = isset($settings['data']['teaser']) ? $settings['data']['teaser'] : '';
+    $nid = isset($settings['data']['node_id']) ? $settings['data']['node_id'] : NULL;
+  }
   else {
     $title = drupal_get_title();
 
     $url = _service_links_get_page_url(NULL, $settings);
     
-    // The choice of front_page shouldn't affect the query which points the original page
-    $query = check_plain(arg(0)) . str_replace(url(arg(0)), '', url($_GET['q']));
+    // The query shouldn't follow the front_page alias but point the original page.
+    $query = drupal_get_normal_path($_GET['q']);
 
     $teaser = '';
     $nid = NULL;
@@ -642,13 +698,15 @@ function _service_links_get_tags($node, &$settings) {
 
   $source = variable_get('site_name', 'Drupal');
 
+  $long_url = $url;
+
   $front_page = url('<front>', array('absolute' => TRUE));
   if ((variable_get('clean_url', 0) == 0) && (strpos($front_page, '?q=') === FALSE)) {
     $front_page .= '?q=';
   }
   else {
-    // Ensure a trailing slash on multilingual sites.
-    $front_page = preg_replace('/\?q\=([0-9a-z-_]+)$/i', '?q=\1/', $front_page);
+    // Ensure a trailing slash on multilingual sites with clean url on.
+    $front_page = preg_replace('/([0-9a-z-_]+)$/i', '\1/', $front_page);
   }
 
   switch ($settings['short_links_use']) {
@@ -669,16 +727,19 @@ function _service_links_get_tags($node, &$settings) {
     'raw-encoded-url' => '<raw-encoded-url>',
     'raw-encoded-teaser' => '<raw-encoded-teaser>',
     'raw-encoded-short-url' => '<raw-encoded-short-url>',
+    'raw-encoded-long-url' => '<raw-encoded-long-url>',
     'raw-encoded-query' => '<raw-encoded-query>',
     'raw-encoded-source' => '<raw-encoded-source>',
     'encoded-title' => '<encoded-title>',
     'encoded-url' => '<encoded-url>',
     'encoded-teaser' => '<encoded-teaser>',
     'encoded-short-url' => '<encoded-short-url>',
+    'encoded-long-url' => '<encoded-long-url>',
     'encoded-query' => '<encoded-query>',
     'encoded-source' => '<encoded-source>',
     'teaser' => '<teaser>',
     'short-url' => '<short-url>',
+    'long-url' => '<long-url>',
     'source' => '<source>',
     'node-id' => '<node-id>',
     'query' => '<query>',
@@ -691,16 +752,19 @@ function _service_links_get_tags($node, &$settings) {
     'raw-encoded-url' => rawurlencode($url),
     'raw-encoded-teaser' => rawurlencode($teaser),
     'raw-encoded-short-url' => rawurlencode($short_url),
+    'raw-encoded-long-url' => rawurlencode($long_url),
     'raw-encoded-query' => rawurlencode($query),
     'raw-encoded-source' => rawurlencode($source),
     'encoded-title' => urlencode($title),
     'encoded-url' => urlencode($url),
     'encoded-teaser' => urlencode($teaser),
     'encoded-short-url' => urlencode($short_url),
+    'encoded-long-url' => urlencode($long_url),
     'encoded-query' => urlencode($query),
     'encoded-source' => urlencode($source),
     'teaser' => $teaser,
     'short-url' => $short_url,
+    'long-url' => $long_url,
     'source' => $source,
     'node-id' => $nid,
     'query' => $query,
@@ -714,7 +778,7 @@ function _service_links_get_tags($node, &$settings) {
  * Return the url for not-node pages.
  */
 function _service_links_get_page_url($node, $settings) {
-  if ($settings['link_to_front']) {
+  if ($settings['link_to_front'] || drupal_is_front_page()) {
     $url = url('<front>', array('absolute' => TRUE, 'query' => $settings['text_to_append']));
   }
   else {
@@ -741,7 +805,7 @@ function _service_links_get_node_title($node, $settings) {
       break;
   }
 
-  return check_plain($title);
+  return $title;
 }
 
 /**

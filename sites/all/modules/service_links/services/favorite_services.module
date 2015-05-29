@@ -2,7 +2,9 @@
 
 /**
  * @file
- * Provide the bookmarking support for various browser
+ * Extends Service Links with browser bookmarking.
+ *
+ * @author Fabio Mucciante (TheCrow)
  */
 
 /**
@@ -16,5 +18,6 @@ function favorite_services_service_links() {
     'attributes' => array('style' => 'display:none;'),
     'javascript' => 'favorite_services.js',
   );
+
   return $links;
 }

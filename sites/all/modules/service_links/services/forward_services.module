@@ -2,7 +2,9 @@
 
 /**
  * @file
- * Add the support for Forward module.
+ * Extends Service Links with Forward module support.
+ *
+ * @author Fabio Mucciante (TheCrow)
  */
 
 /**

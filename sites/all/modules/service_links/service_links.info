@@ -4,9 +4,9 @@ core = 6.x
 php = 5.1
 package = Service Links
 
-; Information added by drupal.org packaging script on 2011-10-07
-version = "6.x-2.1"
+; Information added by drupal.org packaging script on 2013-06-10
+version = "6.x-2.2"
 core = "6.x"
 project = "service_links"
-datestamp = "1317978410"
+datestamp = "1370848261"
 
