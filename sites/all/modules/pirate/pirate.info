@@ -1,0 +1,11 @@
+name = Pirate Filter
+description = "Avast ye scurvy dogs!"
+package = "Jetsam from the High Seas"
+core = 6.x
+
+; Information added by drupal.org packaging script on 2011-09-12
+version = "6.x-1.2"
+core = "6.x"
+project = "pirate"
+datestamp = "1315842707"
+

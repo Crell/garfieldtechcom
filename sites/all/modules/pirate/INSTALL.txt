@@ -1,0 +1,5 @@
+Arrr here's what ye do:
+
+1. Put this module in yer modules directory.
+2. Enable it at Administer » Site configuration » Input formats.
+3. Wait until September 19th, matey.
