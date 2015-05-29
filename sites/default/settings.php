@@ -165,7 +165,7 @@ ini_set('url_rewriter.tags',        '');
 #   'anonymous' => 'Visitor',
 # );
 
-$file = 'settings.local.php';
+$file = dirname(__FILE__) . '/settings.local.php';
 if (file_exists($file)) {
   require_once($file);
 }
